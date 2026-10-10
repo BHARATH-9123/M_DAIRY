@@ -1,0 +1,11 @@
+{
+  "name": "m-dairy",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix client run build",
+    "test": "npm --prefix server test && npm --prefix client test"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
