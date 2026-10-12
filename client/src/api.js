@@ -1,5 +1,6 @@
-const base = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-let csrf;
+const base =
+  import.meta.env.VITE_API_URL ||
+  "https://m-dairy.onrender.com/api";let csrf;
 async function token() {
   if (!csrf) {
     const r = await fetch(`${base}/csrf-token`, { credentials: "include" });
