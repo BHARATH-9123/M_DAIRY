@@ -38,7 +38,7 @@ Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
 
 ## Production
 
-Render uses [render.yaml](render.yaml) to run the schema migration before starting the API. Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_CA` (the Aiven CA PEM with escaped newlines), and a long `SESSION_SECRET` in Render. The configured production database is `defaultdb` on port `26403`; never put its credentials in this repository.
+Render uses [render.yaml](render.yaml) to run the schema migration before starting the API. The server start command also verifies and applies safe pending migrations under a MySQL advisory lock, so an API deployment cannot start against missing application tables. Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_CA` (the Aiven CA PEM with escaped newlines), and a long `SESSION_SECRET` in Render. The configured production database is `defaultdb` on port `26403`; never put its credentials in this repository.
 
 Vercel builds `client/dist` using [vercel.json](vercel.json). Set `VITE_API_URL=https://m-dairy.onrender.com/api` in Vercel Production Environment Variables, then redeploy both services. `CLIENT_URL` on Render must be `https://m-dairy.vercel.app`.
 
