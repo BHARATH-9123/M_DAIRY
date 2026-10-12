@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: m-dairy
+    runtime: node
+    buildCommand: npm ci && npm --prefix server ci && npm --prefix client ci && npm --prefix server run migrate && npm --prefix client run build
+    startCommand: npm --prefix server start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://m-dairy.vercel.app
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: 26403
+      - key: DB_NAME
+        value: defaultdb
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL_CA
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

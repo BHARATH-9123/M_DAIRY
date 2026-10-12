@@ -19,7 +19,16 @@ const app = express(),
   MySQLStore = MySQLStoreFactory(session);
 app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors({ origin: config.clientUrl, credentials: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || config.clientOrigins.includes(origin.replace(/\/$/, "")))
+        return callback(null, true);
+      return callback(new Error("Origin is not allowed"));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "100kb" }));
 app.use(
   session({
@@ -34,7 +43,7 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: config.nodeEnv === "production" ? "none" : "lax",
       secure: config.nodeEnv === "production",
       maxAge: 1000 * 60 * 60 * 8,
     },

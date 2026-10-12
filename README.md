@@ -38,7 +38,17 @@ Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
 
 ## Production
 
-Build the client with `npm run build`. Serve `client/dist` from a static web server and configure `CLIENT_URL`, `NODE_ENV=production`, HTTPS, a long random `SESSION_SECRET`, and a restricted MySQL account. Production does not generate a known administrator password; use explicit secure provisioning.
+Render uses [render.yaml](render.yaml) to run the schema migration before starting the API. Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_CA` (the Aiven CA PEM with escaped newlines), and a long `SESSION_SECRET` in Render. The configured production database is `defaultdb` on port `26403`; never put its credentials in this repository.
+
+Vercel builds `client/dist` using [vercel.json](vercel.json). Set `VITE_API_URL=https://m-dairy.onrender.com/api` in Vercel Production Environment Variables, then redeploy both services. `CLIENT_URL` on Render must be `https://m-dairy.vercel.app`.
+
+After Render is deployed, provision an administrator once from a secure Render shell:
+
+```bash
+npm --prefix server run seed:admin
+```
+
+The command requires `ADMIN_USERNAME` and an `ADMIN_PASSWORD` of at least 12 characters. It does not print credentials.
 
 ## Main workflows
 
