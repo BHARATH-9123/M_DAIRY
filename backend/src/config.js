@@ -93,10 +93,13 @@ export const resolveRuntimeConfig = (env = process.env) => {
       ? fs.readFileSync(env.DB_SSL_CA_FILE, "utf8")
       : undefined;
   const sslRejectUnauthorized =
-    env.DB_SSL_REJECT_UNAUTHORIZED === "false" ||
-    env.DB_SSL_REJECT_UNAUTHORIZED === "0"
-      ? false
-      : true;
+    env.DB_SSL_REJECT_UNAUTHORIZED === "true" ||
+    env.DB_SSL_REJECT_UNAUTHORIZED === "1"
+      ? true
+      : env.DB_SSL_REJECT_UNAUTHORIZED === "false" ||
+        env.DB_SSL_REJECT_UNAUTHORIZED === "0"
+        ? false
+        : Boolean(sslCa);
 
   if (nodeEnv === "production") {
     const databaseConfigured = Boolean(parsedDatabaseUrl) ||

@@ -41,6 +41,6 @@ test("accepts a real Aiven MySQL URL without forcing local defaults", () => {
   assert.equal(config.db.database, "defaultdb");
   assert.deepEqual(config.db.ssl, {
     minVersion: "TLSv1.2",
-    rejectUnauthorized: true,
+    rejectUnauthorized: false,
   });
 });
