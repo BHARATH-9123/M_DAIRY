@@ -34,7 +34,7 @@ npm run seed:admin
 npm run dev
 ```
 
-Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
+This project keeps the frontend in `frontend/` and the backend in `backend/`. Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
 
 ## Production
 

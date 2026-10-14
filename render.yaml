@@ -2,8 +2,8 @@ services:
   - type: web
     name: m-dairy
     runtime: node
-    buildCommand: npm ci && npm --prefix server ci && npm --prefix client ci && npm --prefix server run migrate && npm --prefix client run build
-    startCommand: npm --prefix server start
+    buildCommand: npm ci && npm --prefix backend ci && npm --prefix frontend ci && npm --prefix backend run migrate && npm --prefix frontend run build
+    startCommand: npm --prefix backend start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
