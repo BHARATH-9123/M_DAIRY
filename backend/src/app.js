@@ -22,8 +22,17 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || config.clientOrigins.includes(origin.replace(/\/$/, "")))
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/$/, "");
+      if (
+        config.clientOrigins.includes(cleanOrigin) ||
+        cleanOrigin === "https://mdairy.vercel.app" ||
+        cleanOrigin === "https://m-dairy.vercel.app" ||
+        cleanOrigin.endsWith(".vercel.app") ||
+        cleanOrigin.startsWith("http://localhost:")
+      ) {
         return callback(null, true);
+      }
       return callback(new Error("Origin is not allowed"));
     },
     credentials: true,

@@ -65,7 +65,7 @@ export const resolveRuntimeConfig = (env = process.env) => {
 
   const defaultClientUrl =
     nodeEnv === "production"
-      ? "https://m-dairy.vercel.app"
+      ? "https://mdairy.vercel.app,https://m-dairy.vercel.app"
       : "http://localhost:5173";
   const clientUrl = normalizeValue(env.CLIENT_URL, defaultClientUrl);
   const clientOrigins = clientUrl
