@@ -2,7 +2,7 @@ services:
   - type: web
     name: m-dairy
     runtime: node
-    buildCommand: npm --prefix backend ci
+    buildCommand: npm --prefix backend install
     startCommand: npm --prefix backend start
     healthCheckPath: /api/health
     envVars:
