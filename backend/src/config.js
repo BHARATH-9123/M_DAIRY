@@ -1,5 +1,6 @@
 import "dotenv/config";
 import fs from "node:fs";
+import crypto from "node:crypto";
 
 const isPlaceholderValue = (value) => {
   if (typeof value !== "string") return false;
@@ -62,7 +63,11 @@ export const resolveRuntimeConfig = (env = process.env) => {
       ? "development"
       : rawNodeEnv;
 
-  const clientUrl = normalizeValue(env.CLIENT_URL, "http://localhost:5173");
+  const defaultClientUrl =
+    nodeEnv === "production"
+      ? "https://m-dairy.vercel.app"
+      : "http://localhost:5173";
+  const clientUrl = normalizeValue(env.CLIENT_URL, defaultClientUrl);
   const clientOrigins = clientUrl
     .split(",")
     .map((origin) => origin.trim().replace(/\/$/, ""))
@@ -101,13 +106,15 @@ export const resolveRuntimeConfig = (env = process.env) => {
 
     if (!databaseConfigured)
       throw new Error("Missing DB configuration for production");
-    if (!env.SESSION_SECRET || isPlaceholderValue(env.SESSION_SECRET))
-      throw new Error("Missing SESSION_SECRET");
-    if (!env.CLIENT_URL || isPlaceholderValue(env.CLIENT_URL))
-      throw new Error("Missing CLIENT_URL");
-    if (env.SESSION_SECRET.length < 32)
-      throw new Error("SESSION_SECRET must be at least 32 characters in production");
   }
+
+  const rawSecret = normalizeValue(env.SESSION_SECRET, "");
+  const sessionSecret =
+    rawSecret && rawSecret.length >= 32
+      ? rawSecret
+      : (nodeEnv === "production"
+          ? crypto.randomBytes(32).toString("hex")
+          : "development-only-replace-me");
 
   return {
     port: Number(normalizeValue(env.PORT, "5000")),
@@ -131,7 +138,7 @@ export const resolveRuntimeConfig = (env = process.env) => {
       decimalNumbers: true,
       charset: "utf8mb4",
     },
-    sessionSecret: normalizeValue(env.SESSION_SECRET, "development-only-replace-me"),
+    sessionSecret,
   };
 };
 
