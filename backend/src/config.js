@@ -12,9 +12,7 @@ const isPlaceholderValue = (value) => {
     normalized.includes("change_me") ||
     normalized.includes("placeholder") ||
     normalized.includes("example") ||
-    normalized.includes("defaultdb") ||
-    normalized.includes("avnadmin") ||
-    normalized.startsWith("avns_")
+    normalized.startsWith("example_")
   );
 };
 
@@ -24,14 +22,41 @@ const normalizeValue = (value, fallback) => {
   return text && !isPlaceholderValue(text) ? text : fallback;
 };
 
+const parseDatabaseUrl = (value) => {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text || isPlaceholderValue(text)) return null;
+  try {
+    const url = new URL(text);
+    const protocol = url.protocol.replace(":", "");
+    if (!["mysql", "mysql2", "mariadb"].includes(protocol)) return null;
+    return {
+      host: url.hostname,
+      port: Number(url.port || 3306),
+      user: decodeURIComponent(url.username || ""),
+      password: decodeURIComponent(url.password || ""),
+      database: decodeURIComponent((url.pathname || "/").replace(/^\/+|\/+$/g, "") || ""),
+      sslMode: url.searchParams.get("ssl-mode") || url.searchParams.get("ssl_mode") || "",
+    };
+  } catch {
+    return null;
+  }
+};
+
 export const resolveRuntimeConfig = (env = process.env) => {
   const rawNodeEnv = normalizeValue(env.NODE_ENV, "development");
+  const databaseUrl = normalizeValue(
+    env.DATABASE_URL,
+    normalizeValue(env.DB_URL, normalizeValue(env.DB_DSN, "")),
+  );
+  const parsedDatabaseUrl = parseDatabaseUrl(databaseUrl);
   const hasPlaceholderDatabaseSettings =
     isPlaceholderValue(env.CLIENT_URL) ||
     isPlaceholderValue(env.DB_HOST) ||
     isPlaceholderValue(env.DB_USER) ||
     isPlaceholderValue(env.DB_NAME) ||
-    isPlaceholderValue(env.SESSION_SECRET);
+    isPlaceholderValue(env.SESSION_SECRET) ||
+    Boolean(parsedDatabaseUrl && isPlaceholderValue(databaseUrl));
   const nodeEnv =
     rawNodeEnv === "production" && hasPlaceholderDatabaseSettings
       ? "development"
@@ -42,29 +67,44 @@ export const resolveRuntimeConfig = (env = process.env) => {
     .split(",")
     .map((origin) => origin.trim().replace(/\/$/, ""))
     .filter(Boolean);
+  const dbHost = parsedDatabaseUrl?.host || normalizeValue(env.DB_HOST, "localhost");
+  const dbPort = Number(parsedDatabaseUrl?.port || normalizeValue(env.DB_PORT, "3306"));
+  const dbUser = parsedDatabaseUrl?.user || normalizeValue(env.DB_USER, "m_dairy_app");
+  const dbPassword =
+    parsedDatabaseUrl && parsedDatabaseUrl.password !== undefined
+      ? parsedDatabaseUrl.password
+      : normalizeValue(env.DB_PASSWORD, "") || "";
+  const dbName = parsedDatabaseUrl?.database || normalizeValue(env.DB_NAME, "m_dairy");
   const remoteDatabase =
-    Boolean(normalizeValue(env.DB_HOST, "localhost")) &&
-    normalizeValue(env.DB_HOST, "localhost") !== "localhost";
+    (parsedDatabaseUrl ? parsedDatabaseUrl.host : normalizeValue(env.DB_HOST, "localhost")) !==
+      "localhost" &&
+    (parsedDatabaseUrl ? parsedDatabaseUrl.host : normalizeValue(env.DB_HOST, "localhost")) !==
+      "127.0.0.1" &&
+    (parsedDatabaseUrl ? parsedDatabaseUrl.host : normalizeValue(env.DB_HOST, "localhost")) !==
+      "::1";
   const sslCa = env.DB_SSL_CA
     ? env.DB_SSL_CA.replace(/\\n/g, "\n")
     : env.DB_SSL_CA_FILE
       ? fs.readFileSync(env.DB_SSL_CA_FILE, "utf8")
       : undefined;
+  const sslRejectUnauthorized =
+    env.DB_SSL_REJECT_UNAUTHORIZED === "false" ||
+    env.DB_SSL_REJECT_UNAUTHORIZED === "0"
+      ? false
+      : true;
 
   if (nodeEnv === "production") {
-    for (const key of [
-      "DB_HOST",
-      "DB_PORT",
-      "DB_NAME",
-      "DB_USER",
-      "DB_PASSWORD",
-      "SESSION_SECRET",
-      "CLIENT_URL",
-    ]) {
-      const value = env[key];
-      if (!value || isPlaceholderValue(value))
-        throw new Error(`Missing ${key}`);
-    }
+    const databaseConfigured = Boolean(parsedDatabaseUrl) ||
+      [env.DB_HOST, env.DB_PORT, env.DB_NAME, env.DB_USER, env.DB_PASSWORD].every(
+        (value) => value && !isPlaceholderValue(value),
+      );
+
+    if (!databaseConfigured)
+      throw new Error("Missing DB configuration for production");
+    if (!env.SESSION_SECRET || isPlaceholderValue(env.SESSION_SECRET))
+      throw new Error("Missing SESSION_SECRET");
+    if (!env.CLIENT_URL || isPlaceholderValue(env.CLIENT_URL))
+      throw new Error("Missing CLIENT_URL");
     if (env.SESSION_SECRET.length < 32)
       throw new Error("SESSION_SECRET must be at least 32 characters in production");
   }
@@ -74,13 +114,17 @@ export const resolveRuntimeConfig = (env = process.env) => {
     nodeEnv,
     clientOrigins,
     db: {
-      host: normalizeValue(env.DB_HOST, "localhost"),
-      port: Number(normalizeValue(env.DB_PORT, "3306")),
-      user: normalizeValue(env.DB_USER, "m_dairy_app"),
-      password: normalizeValue(env.DB_PASSWORD, "") || "",
-      database: normalizeValue(env.DB_NAME, "m_dairy"),
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPassword,
+      database: dbName,
       ssl: remoteDatabase
-        ? { minVersion: "TLSv1.2", rejectUnauthorized: true, ...(sslCa ? { ca: sslCa } : {}) }
+        ? {
+            minVersion: "TLSv1.2",
+            rejectUnauthorized: sslRejectUnauthorized,
+            ...(sslCa ? { ca: sslCa } : {}),
+          }
         : undefined,
       waitForConnections: true,
       connectionLimit: 10,

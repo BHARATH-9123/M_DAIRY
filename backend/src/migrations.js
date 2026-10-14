@@ -19,8 +19,10 @@ async function missingTables(connection) {
     `SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN (${placeholders})`,
     requiredTables,
   );
-  const found = new Set(rows.map((row) => row.table_name));
-  return requiredTables.filter((table) => !found.has(table));
+  const found = new Set(
+    rows.map((row) => (row.table_name || row.TABLE_NAME || "").toLowerCase()),
+  );
+  return requiredTables.filter((table) => !found.has(table.toLowerCase()));
 }
 
 export async function migrateDatabase(pool, migrationsDirectory) {

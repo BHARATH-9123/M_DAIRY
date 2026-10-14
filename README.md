@@ -17,15 +17,15 @@ CREATE USER 'm_dairy_app'@'localhost' IDENTIFIED BY 'replace_with_a_strong_passw
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON m_dairy.* TO 'm_dairy_app'@'localhost';
 ```
 
-2. Copy `.env.example` to `server/.env` and set the database credentials, session secret, and development administrator credentials. Do not commit this file.
+2. Copy `.env.example` to `backend/.env` and set the database credentials, session secret, and development administrator credentials. Do not commit this file.
+
 3. Install all packages and initialize the schema:
 
 ```bash
 npm install
 npm run install:all
-cd server
-npm run migrate
-npm run seed:admin
+npm --prefix backend run migrate
+npm --prefix backend run seed:admin
 ```
 
 4. Start both processes from the project root:
@@ -34,26 +34,46 @@ npm run seed:admin
 npm run dev
 ```
 
-This project keeps the frontend in `frontend/` and the backend in `backend/`. Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
+The frontend lives in `frontend/` and the backend in `backend/`. Open `http://localhost:5173`. The API runs at `http://localhost:5000`.
 
 ## Production
 
-Render uses [render.yaml](render.yaml) to run the schema migration before starting the API. The server start command also verifies and applies safe pending migrations under a MySQL advisory lock, so an API deployment cannot start against missing application tables. Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_CA` (the Aiven CA PEM with escaped newlines), and a long `SESSION_SECRET` in Render. The configured production database is `defaultdb` on port `26403`; never put its credentials in this repository.
+**Backend — Render**
 
-Vercel builds `client/dist` using [vercel.json](vercel.json). Set `VITE_API_URL=https://m-dairy.onrender.com/api` in Vercel Production Environment Variables, then redeploy both services. `CLIENT_URL` on Render must be `https://m-dairy.vercel.app`.
+Render uses [render.yaml](render.yaml) to build and start the API. The `start` script runs pending migrations automatically on every deploy under a MySQL advisory lock.
 
-After Render is deployed, provision an administrator once from a secure Render shell:
+You only need to set **one** secret variable in Render:
+
+| Variable | Description / Value |
+|---|---|
+| `DATABASE_URL` | Your full database connection string (e.g. `mysql://user:pass@host:24193/defaultdb?ssl-mode=REQUIRED`) |
+
+*Note: `SESSION_SECRET` is generated automatically by Render, and `CLIENT_URL` defaults to your Vercel domain (`https://m-dairy.vercel.app`).*
+
+**Frontend — Vercel**
+
+Vercel builds `frontend/dist` using [vercel.json](vercel.json). Set the following in Vercel **Production Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | `https://m-dairy.onrender.com/api` |
+
+After adding the variable, redeploy from the Vercel dashboard.
+
+**Provision the first administrator**
+
+After the Render service is live, run the following from a Render shell (one time only):
 
 ```bash
-npm --prefix server run seed:admin
+npm --prefix backend run seed:admin
 ```
 
-The command requires `ADMIN_USERNAME` and an `ADMIN_PASSWORD` of at least 12 characters. It does not print credentials.
+The command requires `ADMIN_USERNAME` and `ADMIN_PASSWORD` (at least 12 characters). It does not print credentials to the console.
 
 ## Main workflows
 
 - Add customers/vendors and set their rates and default quantities.
-- Record a day’s attendance (new entries begin absent; choosing present loads defaults).
+- Record a day's attendance (new entries begin absent; choosing present loads defaults).
 - Generate one bill per party/month from saved present attendance.
 - Record payment through the API; payment is rejected when it exceeds the outstanding balance.
 - Download filtered attendance reports as CSV.
@@ -65,4 +85,4 @@ npm run build
 npm test
 ```
 
-The project includes a production client build command. API integration requires the configured MySQL instance. See `docs/` for architecture, schema, security, and implementation details.
+The project includes a production client build command. API integration tests require the configured MySQL instance. See `docs/` for architecture, schema, security, and implementation details.
